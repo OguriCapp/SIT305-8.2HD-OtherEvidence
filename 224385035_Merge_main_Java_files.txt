@@ -1,0 +1,2104 @@
+<!--  All the merged Java files -->
+
+
+
+
+<!-- ApiService.java -->  
+package com.example.task82HDdeakinAIhelperby224385035;
+
+import android.content.Context;
+import android.util.Log;
+
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Service class for handling API communication with the backend server.
+ * This class provides methods for user registration, login, chat, and other API operations.
+ */
+public class ApiService {
+    private static final String TAG = "ApiService";
+    
+    // Base URL of the backend API server (Android emulator localhost)
+    // For physical devices, replace with your computer's IP address
+    // Example: "http://192.168.1.100:5000" (use your computer's actual IP address)
+    private static final String BASE_URL = "http://10.0.2.2:5000";
+    
+    // API endpoints
+    private static final String CHAT_ENDPOINT = BASE_URL + "/chat";
+    private static final String REGISTER_ENDPOINT = BASE_URL + "/api/register";
+    private static final String LOGIN_ENDPOINT = BASE_URL + "/api/login";
+    private static final String INTERESTS_ENDPOINT = BASE_URL + "/api/interests";
+    private static final String HISTORY_ENDPOINT = BASE_URL + "/api/history";
+    
+    // Volley RequestQueue
+    private RequestQueue requestQueue;
+    
+    // Constructor
+    public ApiService(Context context) {
+        requestQueue = Volley.newRequestQueue(context);
+    }
+    
+    /**
+     * Interface for handling API responses
+     */
+    public interface ApiResponseListener<T> {
+        void onSuccess(T response);
+        void onError(String errorMessage);
+    }
+    
+    /**
+     * Register a new user
+     * 
+     * @param name User's name
+     * @param studentId Student ID
+     * @param email Email address
+     * @param campus Campus
+     * @param password Password
+     * @param listener Response listener
+     */
+    public void registerUser(String name, String studentId, String email, String campus, String password, 
+                            ApiResponseListener<String> listener) {
+        try {
+            // Create request body
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("name", name);
+            requestBody.put("studentId", studentId);
+            requestBody.put("email", email);
+            requestBody.put("campus", campus);
+            requestBody.put("password", password);
+            
+            // Create JSON request
+            JsonObjectRequest request = new JsonObjectRequest(
+                    Request.Method.POST,
+                    REGISTER_ENDPOINT,
+                    requestBody,
+                    response -> {
+                        try {
+                            boolean success = response.getBoolean("success");
+                            String message = response.getString("message");
+                            
+                            if (success) {
+                                listener.onSuccess(response.getString("userId"));
+                            } else {
+                                listener.onError(message);
+                            }
+                        } catch (JSONException e) {
+                            listener.onError("Failed to parse response: " + e.getMessage());
+                        }
+                    },
+                    error -> {
+                        handleApiError(error, listener);
+                    }
+            );
+            
+            // Set timeout (10 seconds)
+            request.setRetryPolicy(new DefaultRetryPolicy(
+                    10000,
+                    DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+            ));
+            
+            // Add to request queue
+            requestQueue.add(request);
+            
+        } catch (JSONException e) {
+            listener.onError("Failed to create request: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Login a user
+     * 
+     * @param studentId Student ID
+     * @param password Password
+     * @param listener Response listener
+     */
+    public void loginUser(String studentId, String password, ApiResponseListener<JSONObject> listener) {
+        try {
+            // Create request body
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("studentId", studentId);
+            requestBody.put("password", password);
+            
+            // Create JSON request
+            JsonObjectRequest request = new JsonObjectRequest(
+                    Request.Method.POST,
+                    LOGIN_ENDPOINT,
+                    requestBody,
+                    response -> {
+                        try {
+                            boolean success = response.getBoolean("success");
+                            String message = response.getString("message");
+                            
+                            if (success) {
+                                JSONObject userData = new JSONObject();
+                                userData.put("userId", response.getString("userId"));
+                                userData.put("name", response.getString("name"));
+                                listener.onSuccess(userData);
+                            } else {
+                                listener.onError(message);
+                            }
+                        } catch (JSONException e) {
+                            listener.onError("Failed to parse response: " + e.getMessage());
+                        }
+                    },
+                    error -> {
+                        handleApiError(error, listener);
+                    }
+            );
+            
+            // Set timeout (10 seconds)
+            request.setRetryPolicy(new DefaultRetryPolicy(
+                    10000,
+                    DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+            ));
+            
+            // Add to request queue
+            requestQueue.add(request);
+            
+        } catch (JSONException e) {
+            listener.onError("Failed to create request: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Save user interests
+     * 
+     * @param userId User ID
+     * @param interests List of interests
+     * @param listener Response listener
+     */
+    public void saveInterests(String userId, List<String> interests, ApiResponseListener<Boolean> listener) {
+        try {
+            // Create request body
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("userId", userId);
+            requestBody.put("interests", new JSONArray(interests));
+            
+            // Create JSON request
+            JsonObjectRequest request = new JsonObjectRequest(
+                    Request.Method.POST,
+                    INTERESTS_ENDPOINT,
+                    requestBody,
+                    response -> {
+                        try {
+                            boolean success = response.getBoolean("success");
+                            String message = response.getString("message");
+                            
+                            if (success) {
+                                listener.onSuccess(true);
+                            } else {
+                                listener.onError(message);
+                            }
+                        } catch (JSONException e) {
+                            listener.onError("Failed to parse response: " + e.getMessage());
+                        }
+                    },
+                    error -> {
+                        handleApiError(error, listener);
+                    }
+            );
+            
+            // Set timeout (10 seconds)
+            request.setRetryPolicy(new DefaultRetryPolicy(
+                    10000,
+                    DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+            ));
+            
+            // Add to request queue
+            requestQueue.add(request);
+            
+        } catch (JSONException e) {
+            listener.onError("Failed to create request: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get user interests
+     * 
+     * @param userId User ID
+     * @param listener Response listener
+     */
+    public void getInterests(String userId, ApiResponseListener<List<String>> listener) {
+        // Create JSON request
+        JsonObjectRequest request = new JsonObjectRequest(
+                Request.Method.GET,
+                INTERESTS_ENDPOINT + "/" + userId,
+                null,
+                response -> {
+                    try {
+                        boolean success = response.getBoolean("success");
+                        
+                        if (success) {
+                            // Parse interests array
+                            JSONArray interestsArray = response.getJSONArray("interests");
+                            List<String> interests = new ArrayList<>();
+                            
+                            for (int i = 0; i < interestsArray.length(); i++) {
+                                interests.add(interestsArray.getString(i));
+                            }
+                            
+                            listener.onSuccess(interests);
+                        } else {
+                            listener.onError(response.getString("message"));
+                        }
+                    } catch (JSONException e) {
+                        listener.onError("Failed to parse response: " + e.getMessage());
+                    }
+                },
+                error -> {
+                    handleApiError(error, listener);
+                }
+        );
+        
+        // Set timeout (10 seconds)
+        request.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        ));
+        
+        // Add to request queue
+        requestQueue.add(request);
+    }
+    
+    /**
+     * Send a chat message to the AI assistant
+     * 
+     * @param userMessage User's message
+     * @param userId User ID (optional, for saving chat history)
+     * @param listener Response listener
+     */
+    public void sendChatMessage(String userMessage, String userId, ApiResponseListener<String> listener) {
+        // Create a POST request with form data
+        StringRequest request = new StringRequest(
+                Request.Method.POST,
+                CHAT_ENDPOINT,
+                response -> {
+                    listener.onSuccess(response.trim());
+                },
+                error -> {
+                    handleApiError(error, listener);
+                }
+        ) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("userMessage", userMessage);
+                if (userId != null && !userId.isEmpty()) {
+                    params.put("userId", userId);
+                }
+                return params;
+            }
+        };
+        
+        // Set timeout (45 seconds) - Llama-2 may need more time for processing
+        request.setRetryPolicy(new DefaultRetryPolicy(
+                45000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        ));
+        
+        // Add to request queue
+        requestQueue.add(request);
+    }
+    
+    /**
+     * Get chat history for a user
+     * 
+     * @param userId User ID
+     * @param listener Response listener
+     */
+    public void getChatHistory(String userId, ApiResponseListener<List<JSONObject>> listener) {
+        // Create JSON request
+        JsonObjectRequest request = new JsonObjectRequest(
+                Request.Method.GET,
+                HISTORY_ENDPOINT + "/" + userId,
+                null,
+                response -> {
+                    try {
+                        boolean success = response.getBoolean("success");
+                        
+                        if (success) {
+                            // Parse history array
+                            JSONArray historyArray = response.getJSONArray("history");
+                            List<JSONObject> history = new ArrayList<>();
+                            
+                            for (int i = 0; i < historyArray.length(); i++) {
+                                history.add(historyArray.getJSONObject(i));
+                            }
+                            
+                            listener.onSuccess(history);
+                        } else {
+                            listener.onError(response.getString("message"));
+                        }
+                    } catch (JSONException e) {
+                        listener.onError("Failed to parse response: " + e.getMessage());
+                    }
+                },
+                error -> {
+                    handleApiError(error, listener);
+                }
+        );
+        
+        // Set timeout (10 seconds)
+        request.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        ));
+        
+        // Add to request queue
+        requestQueue.add(request);
+    }
+    
+    /**
+     * Get a specific chat history entry
+     * 
+     * @param userId User ID
+     * @param historyId History entry ID
+     * @param listener Response listener
+     */
+    public void getChatHistoryEntry(String userId, String historyId, ApiResponseListener<JSONObject> listener) {
+        // Create JSON request
+        JsonObjectRequest request = new JsonObjectRequest(
+                Request.Method.GET,
+                HISTORY_ENDPOINT + "/" + userId + "/" + historyId,
+                null,
+                response -> {
+                    try {
+                        boolean success = response.getBoolean("success");
+                        
+                        if (success) {
+                            // Get history entry
+                            JSONObject historyEntry = response.getJSONObject("history");
+                            listener.onSuccess(historyEntry);
+                        } else {
+                            listener.onError(response.getString("message"));
+                        }
+                    } catch (JSONException e) {
+                        listener.onError("Failed to parse response: " + e.getMessage());
+                    }
+                },
+                error -> {
+                    handleApiError(error, listener);
+                }
+        );
+        
+        // Set timeout (10 seconds)
+        request.setRetryPolicy(new DefaultRetryPolicy(
+                10000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        ));
+        
+        // Add to request queue
+        requestQueue.add(request);
+    }
+    
+    /**
+     * Delete chat history entry
+     * 
+     * @param userId User ID
+     * @param historyId History entry ID
+     * @param listener Response listener
+     */
+    public void deleteChatHistoryEntry(String userId, String historyId, final ApiResponseListener<Boolean> listener) {
+        // Build URL for API
+        String url = HISTORY_ENDPOINT + "/" + userId + "/" + historyId;
+        
+        // Create DELETE request
+        StringRequest request = new StringRequest(
+            Request.Method.DELETE,
+            url,
+            response -> {
+                try {
+                    // Parse response
+                    JSONObject responseJson = new JSONObject(response);
+                    boolean success = responseJson.getBoolean("success");
+                    
+                    if (success) {
+                        listener.onSuccess(true);
+                    } else {
+                        String message = responseJson.getString("message");
+                        listener.onError(message);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    listener.onError("Error parsing response: " + e.getMessage());
+                }
+            },
+            error -> {
+                // Handle connection errors and report back to the caller
+                handleApiError(error, listener);
+            }
+        ) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Content-Type", "application/json");
+                return headers;
+            }
+        };
+        
+        // Set timeout (30 seconds)
+        request.setRetryPolicy(new DefaultRetryPolicy(
+            30000,
+            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        ));
+        
+        // Add request to queue
+        requestQueue.add(request);
+    }
+    
+    /**
+     * Handle API errors
+     * 
+     * @param error Volley error
+     * @param listener Response listener
+     */
+    private <T> void handleApiError(VolleyError error, ApiResponseListener<T> listener) {
+        String errorMessage = "Network error occurred";
+        
+        if (error.networkResponse != null) {
+            // Try to parse error response
+            try {
+                String errorData = new String(error.networkResponse.data);
+                JSONObject errorJson = new JSONObject(errorData);
+                if (errorJson.has("message")) {
+                    errorMessage = errorJson.getString("message");
+                }
+            } catch (Exception e) {
+                // If we can't parse the error, use HTTP status code
+                errorMessage = "Server error: " + error.networkResponse.statusCode;
+            }
+        } else if (error.getMessage() != null) {
+            errorMessage = error.getMessage();
+        }
+        
+        Log.e(TAG, "API Error: " + errorMessage);
+        listener.onError(errorMessage);
+    }
+} 
+
+
+
+
+
+<!-- ChatActivity.java -->  
+package com.example.task82HDdeakinAIhelperby224385035;
+
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
+
+import com.google.android.material.chip.Chip;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+public class ChatActivity extends AppCompatActivity {
+
+    // UI elements
+    private LinearLayout messagesContainer;
+    private EditText chatInputBox;
+    private View sendButton;
+    private ProgressBar progressBar;
+    private ImageButton backButton;
+    private ImageButton saveButton;
+    private Chip questionChip1, questionChip2, questionChip3, questionChip4, questionChip5;
+    
+    // SharedPreferences
+    private SharedPreferences preferences;
+    private static final String PREF_NAME = "UserPrefs";
+    
+    // User information
+    private String username;
+    private String studentId;
+    
+    // API Service
+    private ApiService apiService;
+    
+    // Chat history
+    private List<ChatMessage> chatHistory = new ArrayList<>();
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_chat);
+        
+        // Initialize SharedPreferences
+        preferences = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        
+        // Initialize API Service
+        apiService = new ApiService(this);
+        
+        // Get user information
+        loadUserData();
+        
+        // Initialize UI elements
+        messagesContainer = findViewById(R.id.messagesContainer);
+        chatInputBox = findViewById(R.id.chatInputBox);
+        sendButton = findViewById(R.id.sendButton);
+        progressBar = findViewById(R.id.progressBar);
+        backButton = findViewById(R.id.backButton);
+        saveButton = findViewById(R.id.saveButton);
+        
+        // Initialize question chips
+        questionChip1 = findViewById(R.id.questionChip1);
+        questionChip2 = findViewById(R.id.questionChip2);
+        questionChip3 = findViewById(R.id.questionChip3);
+        questionChip4 = findViewById(R.id.questionChip4);
+        questionChip5 = findViewById(R.id.questionChip5);
+        
+        // Set click listeners
+        sendButton.setOnClickListener(v -> sendMessage());
+        backButton.setOnClickListener(v -> finish());
+        saveButton.setOnClickListener(v -> saveChatToHistory());
+        
+        // Set click listeners for question chips
+        questionChip1.setOnClickListener(v -> sendSuggestedQuestion(questionChip1.getText().toString()));
+        questionChip2.setOnClickListener(v -> sendSuggestedQuestion(questionChip2.getText().toString()));
+        questionChip3.setOnClickListener(v -> sendSuggestedQuestion(questionChip3.getText().toString()));
+        questionChip4.setOnClickListener(v -> sendSuggestedQuestion(questionChip4.getText().toString()));
+        questionChip5.setOnClickListener(v -> sendSuggestedQuestion(questionChip5.getText().toString()));
+        
+        // Show welcome message
+        addBotMessage("Hello " + username + "! I'm your Deakin University AI assistant powered by Llama-2. You can ask me about Cloud Deakin, campus facilities, or other university-related questions, or select one of the suggested questions below.");
+    }
+    
+    private void loadUserData() {
+        studentId = preferences.getString("currentUserId", "");
+        username = preferences.getString("name_" + studentId, "Student");
+    }
+    
+    private void sendSuggestedQuestion(String question) {
+        chatInputBox.setText(question);
+        sendMessage();
+    }
+    
+    private void sendMessage() {
+        // Get message text
+        final String userMessage = chatInputBox.getText().toString().trim();
+        
+        // Check if the input is empty
+        if (userMessage.isEmpty()) {
+            Toast.makeText(this, "Please enter a message", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Add to chat and clear input
+        addUserMessage(userMessage);
+        chatInputBox.setText("");
+        
+        // Add to chat history
+        chatHistory.add(new ChatMessage(userMessage, true));
+
+        // Show loading
+        progressBar.setVisibility(View.VISIBLE);
+
+        // Send message using API service
+        apiService.sendChatMessage(userMessage, studentId, new ApiService.ApiResponseListener<String>() {
+            @Override
+            public void onSuccess(String botMessage) {
+                progressBar.setVisibility(View.GONE);
+                
+                // Show response
+                addBotMessage(botMessage);
+                
+                // Add to chat history
+                chatHistory.add(new ChatMessage(botMessage, false));
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                // Handle error
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(ChatActivity.this, "Error connecting to Llama-2 server: " + errorMessage, Toast.LENGTH_LONG).show();
+                String fallbackError = "Sorry, I'm unable to respond right now. Please check your server connection and ensure Ollama is running.";
+                addBotMessage(fallbackError);
+                
+                // Add to chat history
+                chatHistory.add(new ChatMessage(fallbackError, false));
+            }
+        });
+    }
+    
+    private void addUserMessage(String message) {
+        // To create message card
+        CardView cardView = new CardView(this);
+        
+        // Set card style
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardParams.gravity = Gravity.END;
+        cardParams.setMargins(50, 10, 10, 10);
+        cardView.setLayoutParams(cardParams);
+        cardView.setRadius(16);
+        cardView.setCardBackgroundColor(ContextCompat.getColor(this, R.color.light_green));
+        cardView.setContentPadding(15, 10, 15, 10);
+
+        // Add message text
+        TextView textView = new TextView(this);
+        textView.setText(message);
+        textView.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+        cardView.addView(textView);
+        
+        // Create user badge
+        TextView userIndicator = new TextView(this);
+        userIndicator.setText(username.substring(0, 1).toUpperCase());
+        userIndicator.setTextSize(12);
+        userIndicator.setTextColor(ContextCompat.getColor(this, R.color.light_green));
+        userIndicator.setBackgroundColor(ContextCompat.getColor(this, android.R.color.white));
+        userIndicator.setPadding(10, 5, 10, 5);
+        userIndicator.setGravity(Gravity.CENTER);
+        
+        // Set badge position
+        LinearLayout.LayoutParams indicatorParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        indicatorParams.gravity = Gravity.END;
+        indicatorParams.setMargins(0, 5, 10, 0);
+        userIndicator.setLayoutParams(indicatorParams);
+        
+        // Add to chat
+        messagesContainer.addView(userIndicator);
+        messagesContainer.addView(cardView);
+    }
+
+    private void addBotMessage(String message) {
+        // Create horizontal layout for bot message with icon
+        LinearLayout messageRow = new LinearLayout(this);
+        messageRow.setOrientation(LinearLayout.HORIZONTAL);
+        messageRow.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        messageRow.setGravity(Gravity.CENTER_VERTICAL);
+        
+        // Create image view with Deakin logo
+        ImageView deakinLogo = new ImageView(this);
+        deakinLogo.setImageResource(R.drawable.deakin_logo);
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(80, 80);
+        logoParams.setMargins(0, 0, 12, 0);
+        logoParams.gravity = Gravity.CENTER_VERTICAL;
+        deakinLogo.setLayoutParams(logoParams);
+        deakinLogo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        
+        // Create message card
+        CardView cardView = new CardView(this);
+        
+        // Set card style
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardParams.setMargins(8, 0, 50, 0);
+        cardView.setLayoutParams(cardParams);
+        cardView.setRadius(16);
+        cardView.setCardBackgroundColor(ContextCompat.getColor(this, android.R.color.white));
+        cardView.setContentPadding(15, 10, 15, 10);
+
+        // Add message text
+        TextView textView = new TextView(this);
+        textView.setText(message);
+        textView.setTextColor(ContextCompat.getColor(this, R.color.black));
+        cardView.addView(textView);
+        
+        // Add components to horizontal layout
+        messageRow.addView(deakinLogo);
+        messageRow.addView(cardView);
+        
+        // Add to message container with bottom margin
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        rowParams.setMargins(0, 0, 0, 15);
+        messageRow.setLayoutParams(rowParams);
+        
+        messagesContainer.addView(messageRow);
+    }
+    
+    private void saveChatToHistory() {
+        if (chatHistory.size() == 0) {
+            Toast.makeText(this, "No conversation to save", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        try {
+            SharedPreferences.Editor editor = preferences.edit();
+            
+            // Get history count
+            int historyCount = preferences.getInt("history_count_" + studentId, 0);
+            
+            // Create new history entry
+            JSONObject historyEntry = new JSONObject();
+            historyEntry.put("timestamp", new Date().getTime());
+            historyEntry.put("title", chatHistory.get(0).message.length() > 30 ? 
+                    chatHistory.get(0).message.substring(0, 27) + "..." : 
+                    chatHistory.get(0).message);
+            
+            // Add messages
+            JSONArray messages = new JSONArray();
+            for (ChatMessage message : chatHistory) {
+                JSONObject messageObj = new JSONObject();
+                messageObj.put("message", message.message);
+                messageObj.put("isUser", message.isUser);
+                messages.put(messageObj);
+            }
+            historyEntry.put("messages", messages);
+            
+            // Save to preferences
+            editor.putString("history_" + studentId + "_" + historyCount, historyEntry.toString());
+            editor.putInt("history_count_" + studentId, historyCount + 1);
+            editor.apply();
+            
+            Toast.makeText(this, "Conversation saved to history", Toast.LENGTH_SHORT).show();
+            
+        } catch (JSONException e) {
+            Toast.makeText(this, "Failed to save conversation", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+    
+    // Chat message class for local storage
+    private static class ChatMessage {
+        String message;
+        boolean isUser;
+        
+        ChatMessage(String message, boolean isUser) {
+            this.message = message;
+            this.isUser = isUser;
+        }
+    }
+} 
+
+
+
+
+
+<!-- ChatHistoryActivity.java -->  
+package com.example.task82HDdeakinAIhelperby224385035;
+
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class ChatHistoryActivity extends AppCompatActivity {
+
+    // UI elements
+    private LinearLayout messagesContainer;
+    private ImageButton backButton;
+    private ImageButton deleteButton;
+    private TextView noHistoryText;
+    
+    // SharedPreferences
+    private SharedPreferences preferences;
+    private static final String PREF_NAME = "UserPrefs";
+    
+    // User information
+    private String username;
+    private String studentId;
+    
+    // API Service
+    private ApiService apiService;
+    
+    // History ID
+    private String historyId;
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_chat_history);
+        
+        // Initialize SharedPreferences
+        preferences = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        
+        // Initialize API Service
+        apiService = new ApiService(this);
+        
+        // Get user information
+        loadUserData();
+        
+        // Get history ID from intent
+        historyId = getIntent().getStringExtra("history_id");
+        
+        if (historyId == null) {
+            Toast.makeText(this, "Invalid history ID", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        
+        // Initialize UI elements
+        messagesContainer = findViewById(R.id.messagesContainer);
+        backButton = findViewById(R.id.backButton);
+        deleteButton = findViewById(R.id.deleteButton);
+        noHistoryText = findViewById(R.id.noHistoryText);
+        
+        // Set click listeners
+        backButton.setOnClickListener(v -> finish());
+        deleteButton.setOnClickListener(v -> deleteHistory());
+        
+        // Load chat history
+        loadChatHistory();
+    }
+    
+    private void loadUserData() {
+        studentId = preferences.getString("currentUserId", "");
+        username = preferences.getString("name_" + studentId, "Student");
+    }
+    
+    private void loadChatHistory() {
+        // Show loading message
+        noHistoryText.setVisibility(View.VISIBLE);
+        noHistoryText.setText("Loading chat history...");
+        
+        // Get specific chat history from API
+        apiService.getChatHistoryEntry(studentId, historyId, new ApiService.ApiResponseListener<JSONObject>() {
+            @Override
+            public void onSuccess(JSONObject historyEntry) {
+                try {
+                    // Get user and bot messages
+                    String userMessage = historyEntry.getString("userMessage");
+                    String botMessage = historyEntry.getString("botMessage");
+                    
+                    // Clear messages container
+                    messagesContainer.removeAllViews();
+                    noHistoryText.setVisibility(View.GONE);
+                    
+                    // Display messages
+                    addUserMessage(userMessage);
+                    addBotMessage(botMessage);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    showNoHistoryMessage();
+                }
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                // If API fails, try to load from SharedPreferences as fallback
+                loadHistoryFromPreferences();
+            }
+        });
+    }
+    
+    private void loadHistoryFromPreferences() {
+        // Get history JSON from SharedPreferences
+        try {
+            // Parse integer history ID from string
+            int historyIdInt = Integer.parseInt(historyId);
+            String historyJson = preferences.getString("history_" + studentId + "_" + historyIdInt, "");
+            
+            if (historyJson.isEmpty()) {
+                showNoHistoryMessage();
+                return;
+            }
+            
+            // Parse history
+            JSONObject historyEntry = new JSONObject(historyJson);
+            JSONArray messages = historyEntry.getJSONArray("messages");
+            
+            // Clear previous views
+            messagesContainer.removeAllViews();
+            noHistoryText.setVisibility(View.GONE);
+            
+            // Display messages
+            for (int i = 0; i < messages.length(); i++) {
+                JSONObject message = messages.getJSONObject(i);
+                String messageText = message.getString("message");
+                boolean isUser = message.getBoolean("isUser");
+                
+                if (isUser) {
+                    addUserMessage(messageText);
+                } else {
+                    addBotMessage(messageText);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            showNoHistoryMessage();
+        }
+    }
+    
+    private void showNoHistoryMessage() {
+        messagesContainer.removeAllViews();
+        noHistoryText.setVisibility(View.VISIBLE);
+    }
+    
+    private void addUserMessage(String message) {
+        // To create message card
+        CardView cardView = new CardView(this);
+        
+        // Set card style
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardParams.gravity = Gravity.END;
+        cardParams.setMargins(50, 10, 10, 10);
+        cardView.setLayoutParams(cardParams);
+        cardView.setRadius(16);
+        cardView.setCardBackgroundColor(ContextCompat.getColor(this, R.color.light_green));
+        cardView.setContentPadding(15, 10, 15, 10);
+
+        // Add message text
+        TextView textView = new TextView(this);
+        textView.setText(message);
+        textView.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+        cardView.addView(textView);
+        
+        // Create user badge
+        TextView userIndicator = new TextView(this);
+        userIndicator.setText(username.substring(0, 1).toUpperCase());
+        userIndicator.setTextSize(12);
+        userIndicator.setTextColor(ContextCompat.getColor(this, R.color.light_green));
+        userIndicator.setBackgroundColor(ContextCompat.getColor(this, android.R.color.white));
+        userIndicator.setPadding(10, 5, 10, 5);
+        userIndicator.setGravity(Gravity.CENTER);
+        
+        // Set badge position
+        LinearLayout.LayoutParams indicatorParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        indicatorParams.gravity = Gravity.END;
+        indicatorParams.setMargins(0, 5, 10, 0);
+        userIndicator.setLayoutParams(indicatorParams);
+        
+        // Add to chat
+        messagesContainer.addView(userIndicator);
+        messagesContainer.addView(cardView);
+    }
+
+    private void addBotMessage(String message) {
+        // Create horizontal layout for bot message with icon
+        LinearLayout messageRow = new LinearLayout(this);
+        messageRow.setOrientation(LinearLayout.HORIZONTAL);
+        messageRow.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        messageRow.setGravity(Gravity.CENTER_VERTICAL);
+        
+        // Create image view with Deakin logo
+        ImageView deakinLogo = new ImageView(this);
+        deakinLogo.setImageResource(R.drawable.deakin_logo);
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(80, 80);
+        logoParams.setMargins(0, 0, 12, 0);
+        logoParams.gravity = Gravity.CENTER_VERTICAL;
+        deakinLogo.setLayoutParams(logoParams);
+        deakinLogo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        
+        // Create message card
+        CardView cardView = new CardView(this);
+        
+        // Set card style
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardParams.setMargins(8, 0, 50, 0);
+        cardView.setLayoutParams(cardParams);
+        cardView.setRadius(16);
+        cardView.setCardBackgroundColor(ContextCompat.getColor(this, android.R.color.white));
+        cardView.setContentPadding(15, 10, 15, 10);
+
+        // Add message text
+        TextView textView = new TextView(this);
+        textView.setText(message);
+        textView.setTextColor(ContextCompat.getColor(this, R.color.black));
+        cardView.addView(textView);
+        
+        // Add components to horizontal layout
+        messageRow.addView(deakinLogo);
+        messageRow.addView(cardView);
+        
+        // Add to message container with bottom margin
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        rowParams.setMargins(0, 0, 0, 15);
+        messageRow.setLayoutParams(rowParams);
+        
+        messagesContainer.addView(messageRow);
+    }
+
+    private void deleteHistory() {
+        apiService.deleteChatHistoryEntry(studentId, historyId, new ApiService.ApiResponseListener<Boolean>() {
+            @Override
+            public void onSuccess(Boolean result) {
+                Toast.makeText(ChatHistoryActivity.this, "History record deleted successfully", Toast.LENGTH_SHORT).show();
+                
+                // Also remove from SharedPreferences if present
+                try {
+                    int historyIdInt = Integer.parseInt(historyId);
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.remove("history_" + studentId + "_" + historyIdInt);
+                    editor.apply();
+                } catch (NumberFormatException e) {
+                    // Ignore errors - this is just for local backup cleaning
+                }
+                
+                // Go back to main screen
+                finish();
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                Toast.makeText(ChatHistoryActivity.this, "Error deleting history: " + errorMessage, Toast.LENGTH_SHORT).show();
+                
+                // Try fallback to local deletion if history ID can be parsed as integer
+                try {
+                    int historyIdInt = Integer.parseInt(historyId);
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.remove("history_" + studentId + "_" + historyIdInt);
+                    editor.apply();
+                    Toast.makeText(ChatHistoryActivity.this, "History removed from local storage", Toast.LENGTH_SHORT).show();
+                    finish();
+                } catch (NumberFormatException e) {
+                    // If this fails too, just show an error
+                    Toast.makeText(ChatHistoryActivity.this, "Failed to delete history record", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+} 
+
+
+
+
+
+<!-- InterestsActivity.java -->  
+package com.example.task82HDdeakinAIhelperby224385035;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class InterestsActivity extends AppCompatActivity {
+
+    private CheckBox checkboxDegree, checkboxAccommodation, checkboxTransport, 
+                     checkboxClubs, checkboxCulture, checkboxCloudDeakin,
+                     checkboxFacilities, checkboxEvents, checkboxInternships;
+    private Button continueButton;
+    private TextView welcomeText;
+    
+    // SharedPreferences
+    private SharedPreferences preferences;
+    private static final String PREF_NAME = "UserPrefs";
+    
+    // API Service
+    private ApiService apiService;
+    
+    // User information
+    private String username;
+    private String studentId;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_interests);
+        
+        // Initialize SharedPreferences
+        preferences = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        
+        // Initialize API Service
+        apiService = new ApiService(this);
+        
+        // Get user information
+        loadUserData();
+        
+        // Initialize UI elements
+        welcomeText = findViewById(R.id.interestsWelcomeText);
+        welcomeText.setText("Welcome, " + username + "! Please select your interests");
+        
+        // Initialize checkboxes
+        checkboxDegree = findViewById(R.id.checkboxDegree);
+        checkboxAccommodation = findViewById(R.id.checkboxAccommodation);
+        checkboxTransport = findViewById(R.id.checkboxTransport);
+        checkboxClubs = findViewById(R.id.checkboxClubs);
+        checkboxCulture = findViewById(R.id.checkboxCulture);
+        checkboxCloudDeakin = findViewById(R.id.checkboxCloudDeakin);
+        checkboxFacilities = findViewById(R.id.checkboxFacilities);
+        checkboxEvents = findViewById(R.id.checkboxEvents);
+        checkboxInternships = findViewById(R.id.checkboxInternships);
+        
+        // Continue button
+        continueButton = findViewById(R.id.continueButton);
+        continueButton.setOnClickListener(v -> validateAndContinue());
+    }
+    
+    private void loadUserData() {
+        studentId = preferences.getString("currentUserId", "");
+        username = preferences.getString("name_" + studentId, "Student");
+    }
+    
+    private void validateAndContinue() {
+        List<String> selectedInterests = getSelectedInterests();
+        
+        // Check if at least 3 interests are selected
+        if (selectedInterests.size() < 3) {
+            Toast.makeText(this, "Please select at least 3 interests", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Save selected interests to API
+        apiService.saveInterests(studentId, selectedInterests, new ApiService.ApiResponseListener<Boolean>() {
+            @Override
+            public void onSuccess(Boolean success) {
+                // Also save to SharedPreferences as fallback
+                saveSelectedInterestsToPreferences(selectedInterests);
+                
+                // Start the main activity
+                Intent intent = new Intent(InterestsActivity.this, MainActivity.class);
+                startActivity(intent);
+                finish();
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                // Save to SharedPreferences anyway
+                saveSelectedInterestsToPreferences(selectedInterests);
+                Toast.makeText(InterestsActivity.this, "Saved interests locally. " + errorMessage, Toast.LENGTH_SHORT).show();
+                
+                // Start the main activity
+                Intent intent = new Intent(InterestsActivity.this, MainActivity.class);
+                startActivity(intent);
+                finish();
+            }
+        });
+    }
+    
+    private List<String> getSelectedInterests() {
+        List<String> interests = new ArrayList<>();
+        
+        if (checkboxDegree.isChecked()) interests.add("Degree");
+        if (checkboxAccommodation.isChecked()) interests.add("Accommodation");
+        if (checkboxTransport.isChecked()) interests.add("Transport");
+        if (checkboxClubs.isChecked()) interests.add("Clubs");
+        if (checkboxCulture.isChecked()) interests.add("Culture");
+        if (checkboxCloudDeakin.isChecked()) interests.add("CloudDeakin");
+        if (checkboxFacilities.isChecked()) interests.add("Facilities");
+        if (checkboxEvents.isChecked()) interests.add("Events");
+        if (checkboxInternships.isChecked()) interests.add("Internships");
+        
+        return interests;
+    }
+    
+    private void saveSelectedInterestsToPreferences(List<String> interests) {
+        SharedPreferences.Editor editor = preferences.edit();
+        
+        // First, clear previous interests
+        editor.putInt("interests_count_" + studentId, interests.size());
+        
+        // Save each interest
+        for (int i = 0; i < interests.size(); i++) {
+            editor.putString("interest_" + studentId + "_" + i, interests.get(i));
+        }
+        
+        // Mark interests as selected
+        editor.putBoolean("interests_selected_" + studentId, true);
+        
+        // Apply changes
+        editor.apply();
+    }
+} 
+
+
+
+
+
+<!-- LoginActivity.java -->  
+package com.example.task82HDdeakinAIhelperby224385035;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+public class LoginActivity extends AppCompatActivity {
+
+    private EditText studentIdInput;
+    private EditText passwordInput;
+    private Button loginButton;
+    private TextView registerLink;
+    
+    // SharedPreferences for storing user data
+    private SharedPreferences preferences;
+    private static final String PREF_NAME = "UserPrefs";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_login);
+        
+        // Initialize SharedPreferences
+        preferences = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        
+        // Check if user is already logged in
+        if (isUserLoggedIn()) {
+            navigateBasedOnUserStatus();
+            return;
+        }
+        
+        // Initialize UI elements
+        studentIdInput = findViewById(R.id.studentIdInput);
+        passwordInput = findViewById(R.id.passwordInput);
+        loginButton = findViewById(R.id.loginButton);
+        registerLink = findViewById(R.id.registerLink);
+        
+        // Set click listeners
+        loginButton.setOnClickListener(v -> attemptLogin());
+        registerLink.setOnClickListener(v -> openRegisterActivity());
+    }
+    
+    private boolean isUserLoggedIn() {
+        // Check if a user ID is stored in preferences
+        return preferences.getBoolean("isLoggedIn", false);
+    }
+    
+    private void attemptLogin() {
+        // Get input values
+        String studentId = studentIdInput.getText().toString().trim();
+        String password = passwordInput.getText().toString().trim();
+        
+        // Validate inputs
+        if (TextUtils.isEmpty(studentId)) {
+            studentIdInput.setError("Student ID is required");
+            return;
+        }
+        
+        if (TextUtils.isEmpty(password)) {
+            passwordInput.setError("Password is required");
+            return;
+        }
+        
+        // Check credentials
+        if (validateCredentials(studentId, password)) {
+            // Save login state
+            saveLoginState(studentId);
+            
+            // Navigate to appropriate screen
+            navigateBasedOnUserStatus();
+        } else {
+            Toast.makeText(this, "Invalid credentials", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private boolean validateCredentials(String studentId, String password) {
+        // Get stored credentials for the given student ID
+        String storedPassword = preferences.getString("password_" + studentId, null);
+        
+        // Check if the student ID exists and password matches
+        return storedPassword != null && storedPassword.equals(password);
+    }
+    
+    private void saveLoginState(String studentId) {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean("isLoggedIn", true);
+        editor.putString("currentUserId", studentId);
+        editor.apply();
+    }
+    
+    private void navigateBasedOnUserStatus() {
+        String studentId = preferences.getString("currentUserId", "");
+        
+        // Check if user has already selected interests
+        boolean hasSelectedInterests = preferences.getBoolean("interests_selected_" + studentId, false);
+        
+        if (hasSelectedInterests) {
+            // If interests are already selected, go to main activity
+            startMainActivity();
+        } else {
+            // If interests are not selected, go to interests activity
+            startInterestsActivity();
+        }
+    }
+    
+    private void openRegisterActivity() {
+        Intent intent = new Intent(this, RegisterActivity.class);
+        startActivity(intent);
+    }
+    
+    private void startMainActivity() {
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
+        finish(); // Close login activity
+    }
+    
+    private void startInterestsActivity() {
+        Intent intent = new Intent(this, InterestsActivity.class);
+        startActivity(intent);
+        finish(); // Close login activity
+    }
+} 
+
+
+
+
+
+<!-- MainActivity.java -->  
+package com.example.task82HDdeakinAIhelperby224385035;
+//Deakin University AI Student Helper using Llama-2 by 224385035
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
+
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+// Main Activity class for the Deakin University AI Student Helper app
+public class MainActivity extends AppCompatActivity {
+
+    // UI elements
+    private TextView welcomeText;
+    private Button logoutButton;
+    private Button startChatButton;
+    private Button shareButton;
+    private TextView noHistoryText;
+    private LinearLayout historyContainer;
+    private TextView recommendationTitle1, recommendationTitle2, recommendationTitle3;
+    private TextView recommendationText1, recommendationText2, recommendationText3;
+    private CardView recommendationCard1, recommendationCard2, recommendationCard3;
+    
+    // SharedPreferences for storing user data
+    private SharedPreferences preferences;
+    private static final String PREF_NAME = "UserPrefs";
+    
+    // User information
+    private String username;              
+    private String studentId;
+    private List<String> userInterests = new ArrayList<>();
+    
+    // API Service
+    private ApiService apiService;
+    
+    // Volley request queue
+    private RequestQueue requestQueue;
+
+    // To setup UI parts and button clicks
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        
+        // Initialize SharedPreferences
+        preferences = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        
+        // Initialize API Service
+        apiService = new ApiService(this);
+        
+        // Check if user is logged in
+        if (!isUserLoggedIn()) {
+            startLoginActivity();
+            return;
+        }
+        
+        // Get user information
+        loadUserData();
+        
+        // Initialize Volley request queue
+        requestQueue = Volley.newRequestQueue(this);
+
+        // Initialize UI elements
+        welcomeText = findViewById(R.id.welcomeText);
+        logoutButton = findViewById(R.id.logoutButton);
+        startChatButton = findViewById(R.id.startChatButton);
+        shareButton = findViewById(R.id.shareButton);
+        noHistoryText = findViewById(R.id.noHistoryText);
+        historyContainer = findViewById(R.id.historyContainer);
+        
+        // Initialize recommendation text views
+        recommendationTitle1 = findViewById(R.id.recommendationTitle1);
+        recommendationTitle2 = findViewById(R.id.recommendationTitle2);
+        recommendationTitle3 = findViewById(R.id.recommendationTitle3);
+        recommendationText1 = findViewById(R.id.recommendationText1);
+        recommendationText2 = findViewById(R.id.recommendationText2);
+        recommendationText3 = findViewById(R.id.recommendationText3);
+        recommendationCard1 = findViewById(R.id.recommendationCard1);
+        recommendationCard2 = findViewById(R.id.recommendationCard2);
+        recommendationCard3 = findViewById(R.id.recommendationCard3);
+
+        // Set welcome message with user's name
+        welcomeText.setText("Welcome, " + username);
+        
+        // Set click listeners
+        logoutButton.setOnClickListener(v -> logout());
+        startChatButton.setOnClickListener(v -> startChatActivity());
+        shareButton.setOnClickListener(v -> shareApp());
+        
+        // Set click listeners for recommendation cards
+        recommendationCard1.setOnClickListener(v -> openRecommendation(0));
+        recommendationCard2.setOnClickListener(v -> openRecommendation(1));
+        recommendationCard3.setOnClickListener(v -> openRecommendation(2));
+        
+        // Load recommendations based on user interests
+        loadRecommendations();
+        
+        // Load chat history
+        loadChatHistory();
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Reload chat history in case it was updated
+        loadChatHistory();
+    }
+    
+    private boolean isUserLoggedIn() {
+        return preferences.getBoolean("isLoggedIn", false);
+    }
+    
+    private void loadUserData() {
+        studentId = preferences.getString("currentUserId", "");
+        username = preferences.getString("name_" + studentId, "Student");
+        
+        // Load user interests from the API
+        apiService.getInterests(studentId, new ApiService.ApiResponseListener<List<String>>() {
+            @Override
+            public void onSuccess(List<String> interests) {
+                userInterests.clear();
+                userInterests.addAll(interests);
+                loadRecommendations();
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                // If API fails, try to load from SharedPreferences as fallback
+                loadInterestsFromPreferences();
+            }
+        });
+    }
+    
+    private void loadInterestsFromPreferences() {
+        // Load interests from SharedPreferences as before
+        userInterests.clear();
+        int interestsCount = preferences.getInt("interests_count_" + studentId, 0);
+        for (int i = 0; i < interestsCount; i++) {
+            userInterests.add(preferences.getString("interest_" + studentId + "_" + i, ""));
+        }
+        loadRecommendations();
+    }
+    
+    private void logout() {
+        // Clear login state
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean("isLoggedIn", false);
+        editor.remove("currentUserId");
+        editor.apply();
+        
+        // Start login activity
+        startLoginActivity();
+        finish();
+    }
+    
+    private void startLoginActivity() {
+        Intent intent = new Intent(this, LoginActivity.class);
+        startActivity(intent);
+        finish();
+    }
+    
+    private void startChatActivity() {
+        Intent intent = new Intent(this, ChatActivity.class);
+        startActivity(intent);
+    }
+    
+    private void shareApp() {
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Deakin University AI Student Helper");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, 
+                "I'm using the Deakin University AI Student Helper app. It uses Llama-2 AI to answer questions about Deakin University! You should try it too!");
+        startActivity(Intent.createChooser(shareIntent, "Share App"));
+    }
+    
+    private void loadRecommendations() {
+        // If user has no interests, use default recommendations
+        if (userInterests.isEmpty()) {
+            setDefaultRecommendations();
+            return;
+        }
+        
+        // Generate three questions based on user interests
+        for (int i = 0; i < Math.min(3, userInterests.size()); i++) {
+            generateRecommendation(userInterests.get(i), i);
+        }
+        
+        // If user has less than 3 interests, fill remaining with defaults
+        for (int i = userInterests.size(); i < 3; i++) {
+            setDefaultRecommendation(i);
+        }
+    }
+    
+    private void generateRecommendation(String interest, int index) {
+        final String prompt;
+        
+        switch (interest) {
+            case "Degree":
+                prompt = "What are the features of degrees and courses at Deakin University?";
+                break;
+            case "Accommodation":
+                prompt = "What accommodation options are available at Deakin University?";
+                break;
+            case "Transport":
+                prompt = "How to use public transport to reach Deakin University campuses?";
+                break;
+            case "Clubs":
+                prompt = "What student clubs can I join at Deakin University?";
+                break;
+            case "Culture":
+                prompt = "What is the campus culture like at Deakin University?";
+                break;
+            case "CloudDeakin":
+                prompt = "How to effectively use the Cloud Deakin learning platform?";
+                break;
+            case "Facilities":
+                prompt = "What are the main campus facilities at Deakin University?";
+                break;
+            case "Events":
+                prompt = "What annual campus events are held at Deakin University?";
+                break;
+            case "Internships":
+                prompt = "What internship and employment opportunities does Deakin University offer?";
+                break;
+            default:
+                setDefaultRecommendation(index);
+                return;
+        }
+        
+        // Set the title
+        setRecommendationTitle(index, prompt);
+        
+        // Get recommendation from Llama-2
+        String url = "http://10.0.2.2:5000/chat";
+        
+        StringRequest request = new StringRequest(
+                Request.Method.POST, 
+                url,
+                response -> {
+                    String botMessage = response.trim();
+                    // Limit to first two sentences
+                    String summary = limitToFirstTwoSentences(botMessage);
+                    setRecommendationText(index, summary);
+                },
+                error -> {
+                    setRecommendationText(index, "Unable to get recommendations. Please check your network connection.");
+                }
+        ) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("userMessage", prompt);
+                return params;
+            }
+        };
+
+        // Set timeout
+        request.setRetryPolicy(new DefaultRetryPolicy(
+                30000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        ));
+
+        // Add to queue
+        requestQueue.add(request);
+    }
+    
+    private String limitToFirstTwoSentences(String text) {
+        String[] sentences = text.split("[.!?]+");
+        if (sentences.length <= 2) {
+            return text;
+        }
+        return sentences[0].trim() + ". " + sentences[1].trim() + "...";
+    }
+    
+    private void setRecommendationTitle(int index, String title) {
+        switch (index) {
+            case 0:
+                recommendationTitle1.setText(title);
+                break;
+            case 1:
+                recommendationTitle2.setText(title);
+                break;
+            case 2:
+                recommendationTitle3.setText(title);
+                break;
+        }
+    }
+    
+    private void setRecommendationText(int index, String text) {
+        switch (index) {
+            case 0:
+                recommendationText1.setText(text);
+                break;
+            case 1:
+                recommendationText2.setText(text);
+                break;
+            case 2:
+                recommendationText3.setText(text);
+                break;
+        }
+    }
+    
+    private void setDefaultRecommendations() {
+        setDefaultRecommendation(0);
+        setDefaultRecommendation(1);
+        setDefaultRecommendation(2);
+    }
+    
+    private void setDefaultRecommendation(int index) {
+        switch (index) {
+            case 0:
+                recommendationTitle1.setText("How many campuses does Deakin University have?");
+                recommendationText1.setText("Deakin University has four main campuses: Melbourne Burwood campus, Geelong Waurn Ponds campus, Geelong Waterfront campus, and Warrnambool campus. Each campus has different programs and facilities...");
+                break;
+            case 1:
+                recommendationTitle2.setText("How to log in to Cloud Deakin?");
+                recommendationText2.setText("To log in to Cloud Deakin, you need to visit deakin.edu.au/students, then click on the 'CloudDeakin' link. Use your Deakin username and password to log into the system...");
+                break;
+            case 2:
+                recommendationTitle3.setText("What services does Deakin University Student Association (DUSA) provide?");
+                recommendationText3.setText("Deakin University Student Association (DUSA) provides various services including academic support, legal advice, social activities, clubs and society organizations, student representation, and more...");
+                break;
+        }
+    }
+    
+    private void openRecommendation(int index) {
+        Intent intent = new Intent(this, ChatActivity.class);
+        switch (index) {
+            case 0:
+                intent.putExtra("initial_question", recommendationTitle1.getText().toString());
+                break;
+            case 1:
+                intent.putExtra("initial_question", recommendationTitle2.getText().toString());
+                break;
+            case 2:
+                intent.putExtra("initial_question", recommendationTitle3.getText().toString());
+                break;
+        }
+        startActivity(intent);
+    }
+    
+    private void loadChatHistory() {
+        // Clear current history container
+        historyContainer.removeAllViews();
+        historyContainer.addView(noHistoryText);
+        
+        // Load history from API
+        apiService.getChatHistory(studentId, new ApiService.ApiResponseListener<List<JSONObject>>() {
+            @Override
+            public void onSuccess(List<JSONObject> historyList) {
+                if (historyList.isEmpty()) {
+                    return; // No history
+                }
+                
+                // Hide no history text
+                noHistoryText.setVisibility(View.GONE);
+                
+                // Add history items to UI
+                for (int i = 0; i < historyList.size(); i++) {
+                    try {
+                        JSONObject historyEntry = historyList.get(i);
+                        String messageId = historyEntry.getString("messageId");
+                        String userMessage = historyEntry.getString("userMessage");
+                        String timestamp = historyEntry.getString("timestamp");
+                        
+                        // Create title (use first user message)
+                        String title = userMessage.length() > 30 ? 
+                                userMessage.substring(0, 27) + "..." : 
+                                userMessage;
+                                
+                        // Add history item to view
+                        addHistoryItemToView(title, timestamp, messageId);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                // If API fails, try to load from SharedPreferences as fallback
+                loadHistoryFromPreferences();
+            }
+        });
+    }
+    
+    private void loadHistoryFromPreferences() {
+        // Get history count
+        int historyCount = preferences.getInt("history_count_" + studentId, 0);
+        
+        if (historyCount == 0) {
+            return; // No history
+        }
+        
+        // Hide no history text
+        noHistoryText.setVisibility(View.GONE);
+        
+        // Load history from newest to oldest
+        for (int i = historyCount - 1; i >= 0; i--) {
+            String historyJson = preferences.getString("history_" + studentId + "_" + i, "");
+            if (!historyJson.isEmpty()) {
+                try {
+                    addHistoryItem(historyJson, i);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+    
+    private void addHistoryItem(String historyJson, int index) throws JSONException {
+        // Parse JSON string to JSON object
+        JSONObject historyEntry = new JSONObject(historyJson);
+        
+        // Extract necessary information
+        String messageId = historyEntry.optString("messageId", "local_" + index);
+        String userMessage = historyEntry.getString("userMessage");
+        String timestamp = historyEntry.optString("timestamp", new Date().toString());
+        
+        // Create title (use first user message)
+        String title = userMessage.length() > 30 ? 
+                userMessage.substring(0, 27) + "..." : 
+                userMessage;
+                
+        // Add history item to view
+        addHistoryItemToView(title, timestamp, messageId);
+    }
+    
+    private void addHistoryItemToView(String title, String timestamp, String historyId) {
+        // Create history item view
+        View historyItemView = LayoutInflater.from(this).inflate(R.layout.item_history, historyContainer, false);
+        
+        // Set title and date
+        TextView titleView = historyItemView.findViewById(R.id.historyTitle);
+        TextView dateView = historyItemView.findViewById(R.id.historyDate);
+        
+        titleView.setText(title);
+        dateView.setText(formatTimestamp(timestamp));
+        
+        // Set click listener
+        historyItemView.setOnClickListener(v -> openHistoryChat(historyId));
+        
+        // Set delete button click listener
+        ImageView deleteButton = historyItemView.findViewById(R.id.deleteHistoryButton);
+        deleteButton.setOnClickListener(v -> deleteHistoryEntry(historyId));
+        
+        // Add to container
+        historyContainer.addView(historyItemView);
+    }
+    
+    private void deleteHistoryEntry(String historyId) {
+        // Show confirmation dialog
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Delete History")
+            .setMessage("Are you sure you want to delete this conversation?")
+            .setPositiveButton("Delete", (dialog, which) -> {
+                // Call API to delete history
+                apiService.deleteChatHistoryEntry(studentId, historyId, new ApiService.ApiResponseListener<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean result) {
+                        Toast.makeText(MainActivity.this, "History deleted successfully", Toast.LENGTH_SHORT).show();
+                        // Reload history
+                        loadChatHistory();
+                    }
+                    
+                    @Override
+                    public void onError(String errorMessage) {
+                        // Try to delete from local preferences if it's a local ID
+                        if (historyId.startsWith("local_")) {
+                            try {
+                                int historyIndex = Integer.parseInt(historyId.replace("local_", ""));
+                                SharedPreferences.Editor editor = preferences.edit();
+                                editor.remove("history_" + studentId + "_" + historyIndex);
+                                editor.apply();
+                                Toast.makeText(MainActivity.this, "Local history deleted", Toast.LENGTH_SHORT).show();
+                                loadChatHistory();
+                            } catch (NumberFormatException e) {
+                                Toast.makeText(MainActivity.this, "Error deleting history: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            Toast.makeText(MainActivity.this, "Error deleting history: " + errorMessage, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+    
+    private String formatTimestamp(String timestamp) {
+        // Format ISO8601 timestamp to readable format
+        try {
+            // Parse ISO8601 timestamp
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+            isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+            Date date = isoFormat.parse(timestamp);
+            
+            // Format date
+            if (date != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+                return sdf.format(date);
+            }
+        } catch (Exception e) {
+            // If parsing fails, just return the original timestamp
+            e.printStackTrace();
+        }
+        return timestamp;
+    }
+    
+    private void openHistoryChat(String historyId) {
+        Intent intent = new Intent(this, ChatHistoryActivity.class);
+        intent.putExtra("history_id", historyId);
+        intent.putExtra("user_id", studentId);
+        startActivity(intent);
+    }
+}
+
+
+
+
+
+<!-- RegisterActivity.java -->  
+package com.example.task82HDdeakinAIhelperby224385035;
+
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+public class RegisterActivity extends AppCompatActivity {
+
+    private EditText nameInput;
+    private EditText studentIdInput;
+    private EditText emailInput;
+    private AutoCompleteTextView campusInput;
+    private EditText passwordInput;
+    private EditText confirmPasswordInput;
+    private Button registerButton;
+    private TextView loginLink;
+    
+    // SharedPreferences for storing user data
+    private SharedPreferences preferences;
+    private static final String PREF_NAME = "UserPrefs";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_register);
+        
+        // Initialize SharedPreferences
+        preferences = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        
+        // Initialize UI elements
+        nameInput = findViewById(R.id.nameInput);
+        studentIdInput = findViewById(R.id.registerStudentIdInput);
+        emailInput = findViewById(R.id.emailInput);
+        campusInput = findViewById(R.id.campusInput);
+        passwordInput = findViewById(R.id.registerPasswordInput);
+        confirmPasswordInput = findViewById(R.id.confirmPasswordInput);
+        registerButton = findViewById(R.id.registerButton);
+        loginLink = findViewById(R.id.loginLink);
+        
+        // Set up campus dropdown
+        setupCampusDropdown();
+        
+        // Set click listeners
+        registerButton.setOnClickListener(v -> attemptRegistration());
+        loginLink.setOnClickListener(v -> finish()); // Go back to login
+    }
+    
+    private void setupCampusDropdown() {
+        String[] campusOptions = getResources().getStringArray(R.array.campus_options);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_dropdown_item_1line,
+                campusOptions
+        );
+        campusInput.setAdapter(adapter);
+    }
+    
+    private void attemptRegistration() {
+        // Get input values
+        String name = nameInput.getText().toString().trim();
+        String studentId = studentIdInput.getText().toString().trim();
+        String email = emailInput.getText().toString().trim();
+        String campus = campusInput.getText().toString().trim();
+        String password = passwordInput.getText().toString().trim();
+        String confirmPassword = confirmPasswordInput.getText().toString().trim();
+        
+        // Validate inputs
+        if (TextUtils.isEmpty(name)) {
+            nameInput.setError("Name is required");
+            return;
+        }
+        
+        if (TextUtils.isEmpty(studentId)) {
+            studentIdInput.setError("Student ID is required");
+            return;
+        }
+        
+        if (TextUtils.isEmpty(email)) {
+            emailInput.setError("Email is required");
+            return;
+        }
+        
+        if (!isValidEmail(email)) {
+            emailInput.setError("Invalid email format");
+            return;
+        }
+        
+        if (TextUtils.isEmpty(campus)) {
+            campusInput.setError("Campus is required");
+            return;
+        }
+        
+        if (TextUtils.isEmpty(password)) {
+            passwordInput.setError("Password is required");
+            return;
+        }
+        
+        if (password.length() < 6) {
+            passwordInput.setError("Password must be at least 6 characters");
+            return;
+        }
+        
+        if (!password.equals(confirmPassword)) {
+            confirmPasswordInput.setError("Passwords do not match");
+            return;
+        }
+        
+        // Check if student ID already exists
+        if (isStudentIdRegistered(studentId)) {
+            studentIdInput.setError("Student ID already registered");
+            return;
+        }
+        
+        // Save user data
+        saveUserData(name, studentId, email, campus, password);
+        
+        // Show success message
+        Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show();
+        
+        // Redirect to login
+        finish();
+    }
+    
+    private boolean isValidEmail(String email) {
+        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
+    }
+    
+    private boolean isStudentIdRegistered(String studentId) {
+        return preferences.contains("password_" + studentId);
+    }
+    
+    private void saveUserData(String name, String studentId, String email, String campus, String password) {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("name_" + studentId, name);
+        editor.putString("email_" + studentId, email);
+        editor.putString("campus_" + studentId, campus);
+        editor.putString("password_" + studentId, password);
+        editor.apply();
+    }
+} 
